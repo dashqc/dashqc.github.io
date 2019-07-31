@@ -1,2 +1,2 @@
 # dashqc.github.io
-DashQC demo website
+[DashQC demo website](https://dashqc.github.io/)
