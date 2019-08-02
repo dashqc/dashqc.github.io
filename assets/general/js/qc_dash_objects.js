@@ -338,6 +338,7 @@ class QCDash_BarChart {
     }
 }
 
+
 class QCDash_LineChart {
 
     constructor(p_data, p_divID, p_xLabel, p_yLabel, p_height, p_clickFn = null, p_chartTitle = "", p_chartNotes = "", p_extents = [0, 25]) {
@@ -469,7 +470,7 @@ class QCDash_LineChart {
 
 class QCDash_WebStorage_SubjectData {
 
-    constructor(p_exportFilePrefix, p_defaultText, p_textAreaID, p_currentSubject, p_setSubjectCallback) {
+    constructor(p_exportFilePrefix, p_defaultText, p_textAreaID, p_canvasID, p_currentSubject, p_setSubjectCallback) {
 
         // Subject fields
         this.m_currentSubject = p_currentSubject;
@@ -547,14 +548,15 @@ class QCDash_WebStorage_SubjectData {
         .bind("input propertychange", function() {
 
             this.saveCommentsToWebStorage();
-        }.bind(this));        
+        }.bind(this));
+
+        // QC Points fields
+        this.m_canvasID = p_canvasID;        
     }
 
-    importSubjectInfo(p_importJSON) {
+    importSubjectInfo(p_importJSON, p_webStorageObject) {
 
         // Object fields
-        
-
         this.m_currentSubject = p_importJSON.lastSubject.name;
         this.m_exportFilePrefix = p_importJSON.exportFile.prefix;
 
@@ -563,7 +565,6 @@ class QCDash_WebStorage_SubjectData {
         let dateString = currentDate.getDate() + "-" + 
                          (currentDate.getMonth() + 1) + "-" + currentDate.getFullYear();
         let timeStamp = currentDate.getTime();
-
 
         this.m_localStorage = {
 
@@ -628,6 +629,11 @@ class QCDash_WebStorage_SubjectData {
         return this.m_localStorage.data.lastSubject.name;
     }
 
+    get points() {
+
+        return this.m_localStorage.data.subjects[this.m_currentSubject].points;
+    }
+
     get storageID() {
 
         return this.m_localStorage.id;
@@ -643,7 +649,7 @@ class QCDash_WebStorage_SubjectData {
 
     createSubjectRecord(p_subject) {
 
-        this.m_localStorage.data.subjects[p_subject] = { comments: "", status: "" };
+        this.m_localStorage.data.subjects[p_subject] = { comments: "", status: "", points: [] };
     }
 
     hasLastSubjectRecord() {
@@ -745,6 +751,65 @@ class QCDash_WebStorage_SubjectData {
         this.m_localStorage.data.subjects[this.m_currentSubject].comments = this.m_textAreaRef.val();        
     }
 
+    // Clicked points methods
+
+    // Adds a clicked point to webstorage for this registration image for this QC session
+    addPoint(p_x, p_y) {
+
+        // Prevent same point from being added multiple times
+        let pointsList = this.m_localStorage.data.subjects[this.m_currentSubject].points;
+        for ( let index = 0; index < pointsList.length; index++ ) {
+            if ( p_x == pointsList[index][0] && p_y == pointsList[index][1] ){
+                return;
+            }
+        }
+
+        // Save the coordinate in local memory
+        // (NOTE: addPoint is only called when it is drawn to canvas)
+        this.m_localStorage.data.subjects[this.m_currentSubject].points.push([p_x, p_y, true]);
+
+        // Update actual browser web storage
+        this.saveLocalDataToStorage();
+    }
+
+    clearPoints() {
+
+        // Remove all qc points from this subject
+        this.m_localStorage.data.subjects[this.m_currentSubject].points = [];
+
+        // Update actual browser web storage
+        this.saveLocalDataToStorage();        
+    }
+
+    lastPoint() {
+
+        let pointCount = this.m_localStorage.data.subjects[this.m_currentSubject].points.length;
+        return this.m_localStorage.data.subjects[this.m_currentSubject].points[pointCount - 1];
+    }
+
+    pointCount() {
+
+        return this.m_localStorage.data.subjects[this.m_currentSubject].points.length;
+    }
+
+    removeLastPoint() {
+        
+        let pointCount = this.m_localStorage.data.subjects[this.m_currentSubject].points.length;
+        this.m_localStorage.data.subjects[this.m_currentSubject].points.pop();
+
+        // Update actual browser web storage
+        this.saveLocalDataToStorage();
+    }   
+
+    unmarkPoints() {
+
+        // Unmark all points as having been drawn
+        let pointsList = this.m_localStorage.data.subjects[this.m_currentSubject].points;
+        for ( let index = 0; index < pointsList.length; index++ ) {
+            pointsList[index][2] = false;
+        }        
+    }
+
 
     // Web storage methods
 
@@ -821,7 +886,7 @@ class QCDash_WebStorage_SubjectData {
         var fileOfBlob = new File([data], p_exportFilename);
 
         // Returns a URL you can use as a href
-        return window.URL.createObjectURL(fileOfBlob);
+        return window.URL.createObjectURL(fileOfBlob);        
     }    
  
     static importFile(p_webStorageObject, p_filename, p_subjectList, p_uiList, p_setUIToSubjectCallback) {
@@ -830,6 +895,7 @@ class QCDash_WebStorage_SubjectData {
 
             var reader = new FileReader();
             reader.readAsText(p_filename, "UTF-8");
+            var webStorageObject = p_webStorageObject;
             reader.onload = function (p_event) {
 
                 // $("#" + p_uiList.comments).val("Data file: " + p_event.target.result);
@@ -843,17 +909,16 @@ class QCDash_WebStorage_SubjectData {
 
                     // New QCDash_WebStorage_SubjectData changeover function here
                     // This might do a few of the things below
-                    importSubjectInfo(importedJSON);
-
+                    webStorageObject.importSubjectInfo(importedJSON, webStorageObject);
 
                     // Copy web storage data to local record
-                    p_webStorageObject.saveStorageDataToLocal();
+                    webStorageObject.saveStorageDataToLocal();
 
                     // Generate a new export filename
-                    p_webStorageObject.m_exportFilename = p_webStorageObject.generateNextDashboardFilename();
+                    webStorageObject.m_exportFilename = webStorageObject.generateNextDashboardFilename();
 
                     // Fill in the UI
-                    p_setUIToSubjectCallback(p_webStorageObject, p_subjectList, p_uiList);
+                    p_setUIToSubjectCallback(webStorageObject, p_subjectList, p_uiList);
                     
                 } catch ( error ) {
 
