@@ -631,6 +631,9 @@ class QCDash_WebStorage_SubjectData {
 
     get points() {
 
+        if ( !this.m_localStorage.data.subjects[this.m_currentSubject].points ){
+            this.m_localStorage.data.subjects[this.m_currentSubject].points = [];
+        }
         return this.m_localStorage.data.subjects[this.m_currentSubject].points;
     }
 
@@ -758,6 +761,10 @@ class QCDash_WebStorage_SubjectData {
 
         // Prevent same point from being added multiple times
         let pointsList = this.m_localStorage.data.subjects[this.m_currentSubject].points;
+        if ( !pointsList ){
+            this.m_localStorage.data.subjects[this.m_currentSubject].points = [];
+            pointsList = this.m_localStorage.data.subjects[this.m_currentSubject].points;
+        }
         for ( let index = 0; index < pointsList.length; index++ ) {
             if ( p_x == pointsList[index][0] && p_y == pointsList[index][1] ){
                 return;
@@ -783,17 +790,26 @@ class QCDash_WebStorage_SubjectData {
 
     lastPoint() {
 
+        if ( !this.m_localStorage.data.subjects[this.m_currentSubject].points ) {
+            this.m_localStorage.data.subjects[this.m_currentSubject].points = [];
+        }
         let pointCount = this.m_localStorage.data.subjects[this.m_currentSubject].points.length;
         return this.m_localStorage.data.subjects[this.m_currentSubject].points[pointCount - 1];
     }
 
     pointCount() {
 
+        if ( !this.m_localStorage.data.subjects[this.m_currentSubject].points ) {
+            this.m_localStorage.data.subjects[this.m_currentSubject].points = [];
+        }
         return this.m_localStorage.data.subjects[this.m_currentSubject].points.length;
     }
 
     removeLastPoint() {
-        
+
+        if ( !this.m_localStorage.data.subjects[this.m_currentSubject].points ) {
+            this.m_localStorage.data.subjects[this.m_currentSubject].points = [];
+        }            
         let pointCount = this.m_localStorage.data.subjects[this.m_currentSubject].points.length;
         this.m_localStorage.data.subjects[this.m_currentSubject].points.pop();
 
@@ -804,6 +820,9 @@ class QCDash_WebStorage_SubjectData {
     unmarkPoints() {
 
         // Unmark all points as having been drawn
+        if ( !this.m_localStorage.data.subjects[this.m_currentSubject].points ) {
+            this.m_localStorage.data.subjects[this.m_currentSubject].points = [];
+        }        
         let pointsList = this.m_localStorage.data.subjects[this.m_currentSubject].points;
         for ( let index = 0; index < pointsList.length; index++ ) {
             pointsList[index][2] = false;
